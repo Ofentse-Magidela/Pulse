@@ -53,6 +53,37 @@ public class GlobalExceptionHandler {
 
     }
 
+    @ExceptionHandler(EmailNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleEmailNotFoundExceptions(EmailNotFoundException ex) {
+        Map<String, Object> body = new HashMap<>();
+
+        body.put("status", HttpStatus.BAD_REQUEST.value());
+        body.put("error", "Bad Request");
+        body.put("timestamp", LocalDateTime.now());
+
+        Map<String, String> errors = new HashMap<>();
+        errors.put(ex.getField(), ex.getMessage());
+
+        body.put("message", errors);
+        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+
+    }
+
+    @ExceptionHandler(InvalidVerificationCode.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidVerificationCodeExceptions(InvalidVerificationCode ex) {
+        Map<String, Object> body = new HashMap<>();
+
+        body.put("status", HttpStatus.BAD_REQUEST.value());
+        body.put("error", "Bad Request");
+        body.put("timestamp", LocalDateTime.now());
+
+        Map<String, String> errors = new HashMap<>();
+        errors.put(ex.getField(), ex.getMessage());
+
+        body.put("message", errors);
+        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+    }
+
     @ExceptionHandler(InvalidTokenException.class)
     public ResponseEntity<Map<String, Object>> handleInvalidTokenExceptions(InvalidTokenException ex) {
         Map<String, Object> body = new HashMap<>();

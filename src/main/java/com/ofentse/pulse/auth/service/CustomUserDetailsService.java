@@ -1,5 +1,8 @@
-package com.ofentse.pulse.auth;
+package com.ofentse.pulse.auth.service;
 
+import com.ofentse.pulse.auth.User;
+import com.ofentse.pulse.auth.UserPrincipal;
+import com.ofentse.pulse.auth.UserRepository;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
