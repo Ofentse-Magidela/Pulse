@@ -12,7 +12,6 @@ import com.ofentse.pulse.exception.EmailAlreadyExistException;
 import com.ofentse.pulse.exception.BadLoginException;
 import com.ofentse.pulse.exception.EmailNotFoundException;
 import com.ofentse.pulse.security.JwtService;
-import jakarta.validation.Valid;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;

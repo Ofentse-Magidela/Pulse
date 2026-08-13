@@ -14,7 +14,7 @@ public class RegisterDTO {
 
     @NotBlank(message = "Email cannot be blank")
     @Email(message = "Invalid Email. Please Provide A Valid Email Format")
-    @Size(min = 6, max = 256, message = "Email Must Be A Minimum Of 8 Characters And 256 Max")
+    @Size(min = 6, max = 256, message = "Email Must Be A Minimum Of 6 Characters And 256 Max")
     private String email;
 
     @NotBlank(message = "Password cannot be blank")

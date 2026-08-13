@@ -1,5 +1,6 @@
-package com.ofentse.pulse.email;
+package com.ofentse.pulse.notification.email;
 
+import com.ofentse.pulse.notification.dto.EmailNotificationDTO;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
@@ -12,13 +13,13 @@ public class EmailService {
         this.mailSender = mailSender;
     }
 
-    public void sendEmail(String to, String code) {
+    public void sendEmail(EmailNotificationDTO dto) {
         SimpleMailMessage message = new SimpleMailMessage();
 
         message.setFrom(System.getenv("MAIL_USERNAME"));
-        message.setTo(to);
-        message.setSubject("Email Verification Code");
-        message.setText(code);
+        message.setTo(dto.getTo());
+        message.setSubject(dto.getSubject());
+        message.setText(dto.getContent());
 
         mailSender.send(message);
     }

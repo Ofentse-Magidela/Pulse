@@ -1,7 +1,9 @@
 package com.ofentse.pulse.emailverification;
 
+import com.ofentse.pulse.auth.PulseClient;
 import com.ofentse.pulse.auth.User;
-import com.ofentse.pulse.email.EmailService;
+import com.ofentse.pulse.emailverification.dto.EmailNotificationRequest;
+import com.ofentse.pulse.notification.email.EmailService;
 import com.ofentse.pulse.emailverification.dto.ResendCodeDTO;
 import com.ofentse.pulse.emailverification.dto.VerifyEmailDTO;
 import com.ofentse.pulse.exception.EmailNotFoundException;
@@ -13,27 +15,34 @@ import java.security.SecureRandom;
 import java.time.LocalDateTime;
 
 @Service
-public class EmailVerificationService {
+public class  EmailVerificationService {
 
     private final EmailVerificationRepo repo;
     private final EmailService emailService;
-    public EmailVerificationService(EmailVerificationRepo repo, EmailService emailService) {
+    private final PulseClient pulseClient;
+    public EmailVerificationService(EmailVerificationRepo repo, EmailService emailService, PulseClient pulseClient) {
         this.repo = repo;
         this.emailService = emailService;
+        this.pulseClient = pulseClient;
     }
 
     private final SecureRandom random = new SecureRandom();
 
     public void createAndSendVerification(User user) {
 
-        EmailVerification emailVerification = new EmailVerification();
-        emailVerification.setCode(generateVerificationCode());
-        emailVerification.setExpiresAt(LocalDateTime.now().plusMinutes(5));
-        emailVerification.setStatus(VerificationStatus.ACTIVE);
-        emailVerification.setUser(user);
-        repo.save(emailVerification);
+        EmailVerification verification = new EmailVerification();
+        verification.setCode(generateVerificationCode());
+        verification.setExpiresAt(LocalDateTime.now().plusMinutes(5));
+        verification.setStatus(VerificationStatus.ACTIVE);
+        verification.setUser(user);
+        repo.save(verification);
 
-        emailService.sendEmail(user.getEmail(), emailVerification.getCode());
+        EmailNotificationRequest request = new EmailNotificationRequest();
+        request.setTo(user.getEmail());
+        request.setSubject("Email verification Code");
+        request.setContent(verification.getCode());
+
+        pulseClient.sendEmail(request);
     }
 
     @Transactional
@@ -41,7 +50,7 @@ public class EmailVerificationService {
 
         LocalDateTime now = LocalDateTime.now();
         EmailVerification verification = repo.findByUserEmailAndCodeAndStatus(
-                dto.getEmail(), dto.getCode(), VerificationStatus.ACTIVE)
+                 dto.getEmail(), dto.getCode(), VerificationStatus.ACTIVE)
                 .orElseThrow(
                         () -> new InvalidVerificationCode(
                                         "code",
