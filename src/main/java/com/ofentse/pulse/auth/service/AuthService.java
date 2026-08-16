@@ -49,7 +49,6 @@ public class AuthService {
         user.setEmailVerified(false);
 
         emailVerificationService.createAndSendVerification(repository.save(user));
-
     }
 
     public String loginUser(LoginDTO dto) {

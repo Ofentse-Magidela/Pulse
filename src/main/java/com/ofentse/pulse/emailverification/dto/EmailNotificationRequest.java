@@ -3,11 +3,13 @@ package com.ofentse.pulse.emailverification.dto;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 
 @Setter
 @Getter
+@AllArgsConstructor
 public class EmailNotificationRequest {
 
     @NotBlank(message = "Email cannot be blank")

@@ -1,37 +1,54 @@
 package com.ofentse.pulse.notification.email;
 
-import com.ofentse.pulse.notification.dto.EmailNotificationDTO;
+import com.ofentse.pulse.notification.dto.EmailNotificationMessage;
+import com.ofentse.pulse.notification.entity.Notification;
+import com.ofentse.pulse.notification.enums.NotificationStatus;
+import com.ofentse.pulse.notification.repository.NotificationRepo;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
 
 @Service
 public class EmailService {
 
     private final JavaMailSender mailSender;
-    public EmailService(JavaMailSender mailSender) {
+    private final NotificationRepo notificationRepo;
+    public EmailService(JavaMailSender mailSender, NotificationRepo notificationRepo) {
         this.mailSender = mailSender;
+        this.notificationRepo = notificationRepo;
+    }
+    @Value("${spring.mail.username}")
+    private String mailUsername;
+
+    public void sendEmail(EmailNotificationMessage message) {
+        SimpleMailMessage email = new SimpleMailMessage();
+
+        email.setFrom(mailUsername);
+        email.setTo(message.getTo());
+        email.setSubject(message.getSubject());
+        email.setText(message.getContent());
+
+        Notification notification = notificationRepo.findById(message.getNotificationId())
+                .orElseThrow(
+                        // Will swap for custom exception if necessary
+                        () -> new RuntimeException("Notification not found")
+                );
+
+        try {
+            mailSender.send(email);
+            notification.setStatus(NotificationStatus.SENT);
+            notification.setSentAt(LocalDateTime.now());
+            notificationRepo.save(notification);
+
+        } catch (MailException e) {
+            notification.setStatus(NotificationStatus.FAILED);
+            notificationRepo.save(notification);
+            throw e;
+        }
     }
 
-    public void sendEmail(EmailNotificationDTO dto) {
-        SimpleMailMessage message = new SimpleMailMessage();
-
-        message.setFrom(System.getenv("MAIL_USERNAME"));
-        message.setTo(dto.getTo());
-        message.setSubject(dto.getSubject());
-        message.setText(dto.getContent());
-
-        mailSender.send(message);
-    }
-
-    public void sendVerifiedEmail(String email) {
-        SimpleMailMessage message = new SimpleMailMessage();
-
-        message.setFrom(System.getenv("MAIL_USERNAME"));
-        message.setTo(email);
-        message.setSubject("Email Verified");
-        message.setText("Your email was verified successfully");
-
-        mailSender.send(message);
-    }
 }

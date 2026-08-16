@@ -20,9 +20,7 @@ public class NotificationController {
 
     @PostMapping("/email")
     public ResponseEntity<Void> sendEmailNotification(@RequestBody @Valid EmailNotificationDTO dto) {
-
         service.sendEmailNotification(dto);
         return ResponseEntity.accepted().build();
-
     }
 }
