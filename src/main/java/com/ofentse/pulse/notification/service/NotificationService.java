@@ -32,7 +32,6 @@ public class NotificationService {
 
         repo.save(notification);
 
-        System.out.println(notification.getId());
         EmailNotificationMessage message =
                 new EmailNotificationMessage(
                         notification.getId(),
