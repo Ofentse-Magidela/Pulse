@@ -1,11 +1,11 @@
 package com.ofentse.pulse.notification.email;
 
-import com.ofentse.pulse.notification.dto.EmailNotificationMessage;
+import com.ofentse.pulse.notification.email.dto.EmailNotificationMessage;
 import com.ofentse.pulse.notification.entity.Notification;
 import com.ofentse.pulse.notification.enums.NotificationStatus;
+import com.ofentse.pulse.notification.exception.NotificationNotFoundException;
 import com.ofentse.pulse.notification.repository.NotificationRepo;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
@@ -34,21 +34,18 @@ public class EmailService {
 
         Notification notification = notificationRepo.findById(message.getNotificationId())
                 .orElseThrow(
-                        // Will swap for custom exception if necessary
-                        () -> new RuntimeException("Notification not found")
+                        ()-> new NotificationNotFoundException(
+                                "notification", "Notification with ID: " + message.getNotificationId() + " not found.")
                 );
 
-        try {
-            mailSender.send(email);
-            notification.setStatus(NotificationStatus.SENT);
-            notification.setSentAt(LocalDateTime.now());
-            notificationRepo.save(notification);
+        if (notification.getStatus() == NotificationStatus.SENT) return;
 
-        } catch (MailException e) {
-            notification.setStatus(NotificationStatus.FAILED);
-            notificationRepo.save(notification);
-            throw e;
-        }
+        mailSender.send(email);
+
+        notification.setStatus(NotificationStatus.SENT);
+        notification.setSentAt(LocalDateTime.now());
+
+        notificationRepo.save(notification);
     }
 
 }

@@ -1,4 +1,4 @@
-package com.ofentse.pulse.notification.dto;
+package com.ofentse.pulse.notification.email.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

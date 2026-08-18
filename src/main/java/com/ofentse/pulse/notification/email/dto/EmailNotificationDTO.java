@@ -1,4 +1,4 @@
-package com.ofentse.pulse.notification.dto;
+package com.ofentse.pulse.notification.email.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

@@ -1,6 +1,6 @@
 package com.ofentse.pulse.notification.controller;
 
-import com.ofentse.pulse.notification.dto.EmailNotificationDTO;
+import com.ofentse.pulse.notification.email.dto.EmailNotificationDTO;
 import com.ofentse.pulse.notification.service.NotificationService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;

@@ -1,7 +1,8 @@
-package com.ofentse.pulse.notification.email;
+package com.ofentse.pulse.notification.email.consumer;
 
 import com.ofentse.pulse.notification.config.RabbitMQConfig;
-import com.ofentse.pulse.notification.dto.EmailNotificationMessage;
+import com.ofentse.pulse.notification.email.EmailService;
+import com.ofentse.pulse.notification.email.dto.EmailNotificationMessage;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 

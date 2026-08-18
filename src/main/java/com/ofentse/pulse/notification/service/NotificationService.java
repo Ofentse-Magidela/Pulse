@@ -1,7 +1,7 @@
 package com.ofentse.pulse.notification.service;
 
-import com.ofentse.pulse.notification.dto.EmailNotificationDTO;
-import com.ofentse.pulse.notification.dto.EmailNotificationMessage;
+import com.ofentse.pulse.notification.email.dto.EmailNotificationDTO;
+import com.ofentse.pulse.notification.email.dto.EmailNotificationMessage;
 import com.ofentse.pulse.notification.entity.Notification;
 import com.ofentse.pulse.notification.enums.NotificationChannel;
 import com.ofentse.pulse.notification.enums.NotificationStatus;
