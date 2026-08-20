@@ -37,4 +37,7 @@ public class Notification {
     private LocalDateTime createdAt;
 
     private LocalDateTime sentAt;
+
+    @OneToOne(mappedBy = "notification")
+    private OutboxEvent outboxEvent;
 }
