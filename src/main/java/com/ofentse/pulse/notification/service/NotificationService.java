@@ -55,11 +55,14 @@ public class NotificationService {
         String payload = objectMapper.writeValueAsString(message);
 
         OutboxEvent outbox = new OutboxEvent();
+        LocalDateTime now = LocalDateTime.now();
 
         outbox.setNotification(notification);
         outbox.setPayload(payload);
         outbox.setStatus(OutboxEventStatus.PENDING);
-        outbox.setCreatedAt(LocalDateTime.now());
+        outbox.setCreatedAt(now);
+        outbox.setRetryCount(0);
+        outbox.setNextRetryAt(now);
 
         outboxRepo.save(outbox);
 

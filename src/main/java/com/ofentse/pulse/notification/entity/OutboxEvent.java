@@ -33,4 +33,13 @@ public class OutboxEvent {
     private Notification notification;
 
     private LocalDateTime publishedAt;
+
+    @Column(nullable = false)
+    private LocalDateTime nextRetryAt;
+
+    @Column(nullable = false)
+    private int retryCount;
+
+    @Column(columnDefinition = "TEXT")
+    private String failureReason;
 }
