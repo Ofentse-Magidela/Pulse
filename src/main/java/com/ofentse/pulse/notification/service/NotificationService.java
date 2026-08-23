@@ -24,6 +24,7 @@ public class NotificationService {
     private final ObjectMapper objectMapper;
     private final OutboxEventRepo outboxRepo;
     private final ApplicationEventPublisher applicationEventPublisher;
+
     public NotificationService(NotificationRepo repo, ObjectMapper objectMapper, OutboxEventRepo outboxRepo,
                                ApplicationEventPublisher applicationEventPublisher) {
         this.repo = repo;

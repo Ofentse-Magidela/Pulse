@@ -1,7 +1,7 @@
 # Pulse Notification Service
 
 ![Java](https://img.shields.io/badge/Java-21-007396?logo=openjdk\&logoColor=white)
-![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-6DB33F?logo=springboot\&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.x-6DB33F?logo=springboot\&logoColor=white)
 ![RabbitMQ](https://img.shields.io/badge/RabbitMQ-Message%20Broker-FF6600?logo=rabbitmq\&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-4169E1?logo=postgresql\&logoColor=white)
 ![Spring AMQP](https://img.shields.io/badge/Spring%20AMQP-Message%20Processing-6DB33F?logo=spring\&logoColor=white)
