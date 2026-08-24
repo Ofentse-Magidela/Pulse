@@ -49,7 +49,10 @@ public class OutboxStateService {
                 event.setStatus(OutboxEventStatus.PENDING);
                 event.setNextRetryAt(LocalDateTime.now().plusMinutes(30));
             }
-            case 5 -> event.setStatus(OutboxEventStatus.FAILED);
+            case 5 -> {
+                event.setStatus(OutboxEventStatus.FAILED);
+                event.setNextRetryAt(null);
+            }
         }
 
         outboxRepo.save(event);
