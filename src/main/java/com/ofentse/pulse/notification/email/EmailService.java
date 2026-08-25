@@ -17,10 +17,12 @@ public class EmailService {
 
     private final JavaMailSender mailSender;
     private final NotificationRepo notificationRepo;
+
     public EmailService(JavaMailSender mailSender, NotificationRepo notificationRepo) {
         this.mailSender = mailSender;
         this.notificationRepo = notificationRepo;
     }
+
     @Value("${spring.mail.username}")
     private String mailUsername;
 
