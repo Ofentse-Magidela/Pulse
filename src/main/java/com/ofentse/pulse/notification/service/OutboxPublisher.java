@@ -2,7 +2,9 @@ package com.ofentse.pulse.notification.service;
 
 import com.ofentse.pulse.notification.email.dto.EmailNotificationMessage;
 import com.ofentse.pulse.notification.entity.OutboxEvent;
+import com.ofentse.pulse.notification.enums.NotificationChannel;
 import com.ofentse.pulse.notification.producer.NotificationProducer;
+import com.ofentse.pulse.notification.sms.dto.SmsNotificationMessage;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
@@ -18,15 +20,30 @@ public class OutboxPublisher {
         this.objectMapper = objectMapper;
     }
 
-    // Will add switches for sms and push
+    // Push switch left
     public void publishEvent(OutboxEvent event) {
 
-        try{
-            EmailNotificationMessage message = objectMapper.readValue(
-                    event.getPayload(), EmailNotificationMessage.class
-            );
+        try {
+            NotificationChannel channel = event.getNotification().getChannel();
 
-            producer.publishEmail(message);
+            switch(channel) {
+
+                case EMAIL ->  {
+                    EmailNotificationMessage message = objectMapper.readValue(
+                            event.getPayload(), EmailNotificationMessage.class
+                    );
+
+                    producer.publishEmail(message);
+                }
+
+                case SMS -> {
+                    SmsNotificationMessage message = objectMapper.readValue(
+                            event.getPayload(), SmsNotificationMessage.class
+                    );
+
+                    producer.publishSms(message);
+                }
+            }
 
             outboxStateService.markPublished(event);
 

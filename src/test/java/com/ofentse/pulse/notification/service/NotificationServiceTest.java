@@ -9,10 +9,9 @@ import com.ofentse.pulse.notification.enums.OutboxEventStatus;
 import com.ofentse.pulse.notification.event.OutboxEventCreated;
 import com.ofentse.pulse.notification.repository.NotificationRepo;
 import com.ofentse.pulse.notification.repository.OutboxEventRepo;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
+import com.ofentse.pulse.notification.sms.dto.SmsNotificationDTO;
+import com.ofentse.pulse.notification.sms.dto.SmsNotificationMessage;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
@@ -38,33 +37,32 @@ class NotificationServiceTest {
     @Mock
     ApplicationEventPublisher applicationEventPublisher;
 
-    @InjectMocks
-    private NotificationService notificationService;
     @Mock
     private ObjectMapper objectMapper;
 
-    private EmailNotificationDTO dto;
+    @InjectMocks
+    private NotificationService notificationService;
+
+    private EmailNotificationDTO emailDTO;
+    private SmsNotificationDTO smsDTO;
     private Notification notification;
-    private OutboxEvent outbox;
 
     @BeforeEach
     void setup() {
 
-        dto = new EmailNotificationDTO(
+        emailDTO = new EmailNotificationDTO(
                 "user@gmail.com",
                 "Welcome",
                 "Hello from Pulse"
         );
 
+        smsDTO = new SmsNotificationDTO(
+                "1234567890",
+                "Welcome to pulse."
+        );
+
         notification = new Notification();
         notification.setId(1L);
-        notification.setRecipient(dto.getTo());
-        notification.setSubject(dto.getSubject());
-        notification.setStatus(NotificationStatus.PENDING);
-
-        outbox = new OutboxEvent();
-        outbox.setNotification(notification);
-        outbox.setStatus(OutboxEventStatus.PENDING);
     }
 
     @Nested
@@ -77,29 +75,67 @@ class NotificationServiceTest {
 
             when(objectMapper.writeValueAsString(any(EmailNotificationMessage.class))).thenReturn("Payload");
             when(notificationRepo.save(any(Notification.class))).thenReturn(notification);
-            when(outboxEventRepo.save(any(OutboxEvent.class))).thenReturn(outbox);
+            when(outboxEventRepo.save(any(OutboxEvent.class))).thenReturn(new OutboxEvent());
 
-            notificationService.sendEmailNotification(dto);
+            notificationService.sendEmailNotification(emailDTO);
 
             ArgumentCaptor<Notification> captor1 = ArgumentCaptor.forClass(Notification.class);
             verify(notificationRepo).save(captor1.capture());
             Notification savedNotification = captor1.getValue();
 
-            assertNotNull(savedNotification);
             assertEquals("user@gmail.com", savedNotification.getRecipient());
             assertEquals("Welcome", savedNotification.getSubject());
             assertEquals(NotificationStatus.PENDING, savedNotification.getStatus());
+            assertNotNull(savedNotification.getCreatedAt());
 
             ArgumentCaptor<OutboxEvent> captor2 = ArgumentCaptor.forClass(OutboxEvent.class);
             verify(outboxEventRepo).save(captor2.capture());
             OutboxEvent outboxEvent= captor2.getValue();
 
-            assertNotNull(outboxEvent);
             assertEquals(OutboxEventStatus.PENDING, outboxEvent.getStatus());
-            assertEquals("Payload", outboxEvent.getPayload());
+            assertEquals(0, outboxEvent.getRetryCount());
+            assertNotNull(outboxEvent.getCreatedAt());
+            assertNotNull(outboxEvent.getNextRetryAt());
 
             verify(applicationEventPublisher).publishEvent(any(OutboxEventCreated.class));
         }
     }
 
+    @Nested
+    @DisplayName("SendSmsNotification")
+    class SendSmsNotification {
+
+        @Test
+        @DisplayName("SendSmsNotification - Success")
+        void sendSmsNotification_PublishEventAndSavesOutbox_WhenDTOIsValid() {
+
+            notification.setRecipient(smsDTO.getTo());
+
+            when(objectMapper.writeValueAsString(any(SmsNotificationMessage.class))).thenReturn("Payload");
+            when(notificationRepo.save(any(Notification.class))).thenReturn(notification);
+            when(outboxEventRepo.save(any(OutboxEvent.class))).thenReturn(new OutboxEvent());
+
+            notificationService.sendSmsNotification(smsDTO);
+
+            ArgumentCaptor<Notification> captor1 = ArgumentCaptor.forClass(Notification.class);
+            verify(notificationRepo).save(captor1.capture());
+            Notification savedNotification = captor1.getValue();
+
+            assertEquals("1234567890", savedNotification.getRecipient());
+            assertEquals(NotificationStatus.PENDING, savedNotification.getStatus());
+            assertNull(savedNotification.getSubject());
+            assertNotNull(savedNotification.getCreatedAt());
+
+            ArgumentCaptor<OutboxEvent> captor2 = ArgumentCaptor.forClass(OutboxEvent.class);
+            verify(outboxEventRepo).save(captor2.capture());
+            OutboxEvent outboxEvent= captor2.getValue();
+
+            assertEquals(OutboxEventStatus.PENDING, outboxEvent.getStatus());
+            assertEquals(0, outboxEvent.getRetryCount());
+            assertNotNull(outboxEvent.getCreatedAt());
+            assertNotNull(outboxEvent.getNextRetryAt());
+
+            verify(applicationEventPublisher).publishEvent(any(OutboxEventCreated.class));
+        }
+    }
 }

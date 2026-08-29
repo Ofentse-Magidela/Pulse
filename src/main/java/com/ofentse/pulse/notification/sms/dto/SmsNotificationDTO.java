@@ -16,7 +16,7 @@ public class SmsNotificationDTO {
     @Pattern(regexp = "^[+0-9][0-9\\s-]{7,19}$", message = "Please enter a valid phone number")
     private String to;
 
-    @NotBlank
+    @NotBlank(message = "Message contents cannot be blank")
     @Size(max = 10_000, message = "Content cannot exceed 10,000 characters")
     private String content;
 }

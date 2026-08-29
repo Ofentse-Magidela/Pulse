@@ -10,6 +10,8 @@ import com.ofentse.pulse.notification.enums.OutboxEventStatus;
 import com.ofentse.pulse.notification.event.OutboxEventCreated;
 import com.ofentse.pulse.notification.repository.NotificationRepo;
 import com.ofentse.pulse.notification.repository.OutboxEventRepo;
+import com.ofentse.pulse.notification.sms.dto.SmsNotificationDTO;
+import com.ofentse.pulse.notification.sms.dto.SmsNotificationMessage;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -53,6 +55,35 @@ public class NotificationService {
                         dto.getContent()
         );
 
+        saveOutboxEvent(message, notification);
+
+        applicationEventPublisher.publishEvent(new OutboxEventCreated());
+    }
+
+    @Transactional
+    public void sendSmsNotification(SmsNotificationDTO dto) {
+        Notification notification = new Notification();
+
+        notification.setChannel(NotificationChannel.SMS);
+        notification.setRecipient(dto.getTo());
+        notification.setCreatedAt(LocalDateTime.now());
+        notification.setStatus(NotificationStatus.PENDING);
+
+        repo.save(notification);
+
+        SmsNotificationMessage message = new SmsNotificationMessage(
+                notification.getId(),
+                dto.getTo(),
+                dto.getContent()
+        );
+
+        saveOutboxEvent(message, notification);
+
+        applicationEventPublisher.publishEvent(new OutboxEventCreated());
+    }
+
+    private <T> void saveOutboxEvent(T message, Notification notification) {
+
         String payload = objectMapper.writeValueAsString(message);
 
         OutboxEvent outbox = new OutboxEvent();
@@ -66,7 +97,5 @@ public class NotificationService {
         outbox.setNextRetryAt(now);
 
         outboxRepo.save(outbox);
-
-        applicationEventPublisher.publishEvent(new OutboxEventCreated());
     }
 }

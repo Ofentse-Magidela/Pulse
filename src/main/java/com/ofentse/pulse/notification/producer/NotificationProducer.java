@@ -2,6 +2,7 @@ package com.ofentse.pulse.notification.producer;
 
 import com.ofentse.pulse.notification.config.RabbitMQConfig;
 import com.ofentse.pulse.notification.email.dto.EmailNotificationMessage;
+import com.ofentse.pulse.notification.sms.dto.SmsNotificationMessage;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 
@@ -16,6 +17,14 @@ public class NotificationProducer {
         rabbitTemplate.convertAndSend(
                 RabbitMQConfig.EXCHANGE,
                 RabbitMQConfig.EMAIL_ROUTING_KEY,
+                message
+        );
+    }
+
+    public void publishSms(SmsNotificationMessage message) {
+        rabbitTemplate.convertAndSend(
+                RabbitMQConfig.EXCHANGE,
+                RabbitMQConfig.SMS_ROUTING_KEY,
                 message
         );
     }
