@@ -9,7 +9,7 @@
 
 A standalone notification service built with **Spring Boot** for handling asynchronous application notifications.
 
-Pulse is designed to provide a centralized notification pipeline that can be consumed by multiple applications and services. The current implementation focuses on **email notifications**, with RabbitMQ providing asynchronous message processing, retry handling, and dead-lettering.
+Pulse provides a centralized notification pipeline that can be consumed by multiple applications and services. It currently supports **email and SMS notifications**, with RabbitMQ providing asynchronous message processing, retry handling, and dead-lettering.
 
 The authentication service currently acts as a **test/integration client** for Pulse. It provides a realistic application workflow for testing notification delivery while keeping Pulse independent from authentication-specific business logic.
 
@@ -19,32 +19,24 @@ The authentication service currently acts as a **test/integration client** for P
 
 ### Current
 
-* Notification API
 * Email notifications
-* SMTP email delivery
-* Notification persistence
-* Notification status tracking
-* Asynchronous email processing
-* RabbitMQ message publishing
-* RabbitMQ consumer processing
-* JSON message conversion
-* Automatic retry handling
-* Exponential backoff
-* Dead Letter Exchange (DLX)
-* Dead Letter Queue (DLQ)
-* Basic idempotency handling
-* Integration with an authentication service for testing
+* SMS notifications
+* Asynchronous processing with RabbitMQ
+* Retry handling with exponential backoff
+* Dead-letter queues
+* Notification persistence and status tracking
+* Basic validation and idempotency
+* Unit and integration testing
 
 ### Planned
 
-* SMS notifications
 * Push notifications
 * Notification templates
 * User notification preferences
 * Scheduled notifications
-* Transactional Outbox
+* Transactional Outbox hardening
 * Notification replay/recovery
-* Redis-based caching where appropriate
+* Redis-based caching and supporting infrastructure where appropriate
 * Application metrics and observability
 * Docker / Docker Compose
 * CI/CD with GitHub Actions
@@ -55,108 +47,40 @@ The authentication service currently acts as a **test/integration client** for P
 
 ## Architecture
 
-Pulse is designed as an independent service rather than an authentication-specific component.
+Pulse is designed as an independent notification service rather than an authentication-specific component.
 
-```text
-┌──────────────────────┐
-│   Application        │
-│      Services        │
-│                      │
-│ Auth / Other Apps    │
-└──────────┬───────────┘
-           │
-           │ HTTP
-           ▼
-┌──────────────────────────────┐
-│            Pulse             │
-│                              │
-│     Notification API         │
-│             │                │
-│             ▼                │
-│     Notification Service     │
-│             │                │
-│       ┌─────┴─────┐          │
-│       ▼           ▼          │
-│   PostgreSQL    RabbitMQ     │
-│                     │        │
-│                     ▼        │
-│              Email Consume   │
-│                     │        │
-└─────────────────────┼────────┘
-                      │
-                      ▼
-                 SMTP Provider
-```
+Calling applications submit notification requests to Pulse over HTTP. Pulse persists the notification and creates an outbox event for asynchronous processing. RabbitMQ then routes the event to the appropriate channel-specific queue.
 
-The calling application submits a notification request to Pulse over HTTP.
+Each notification channel has its own consumer and delivery implementation. Failed messages are retried using the configured retry strategy and eventually routed through the appropriate dead-letter path when retries are exhausted.
 
-Pulse persists the notification and publishes an asynchronous notification job to RabbitMQ. A dedicated consumer processes the message and communicates with the external email provider.
-
-This prevents the calling application from having to wait for the email provider to complete its work.
+The authentication service currently acts as an integration client, but Pulse is not coupled to it and can be consumed by other applications.
 
 ---
 
 ## Notification Lifecycle
 
-```text
-HTTP Request
-     │
-     ▼
-Notification Created
-     │
-     ▼
-PENDING
-     │
-     ▼
-Published to RabbitMQ
-     │
-     ▼
-Email Consumer
-     │
-     ├── Success ──────────────► SENT
-     │
-     └── Failure
-             │
-             ▼
-        Retry + Backoff
-             │
-             ├── Success ──────► SENT
-             │
-             └── Exhausted
-                    │
-                    ▼
-                   DLX
-                    │
-                    ▼
-                   DLQ
-                    │
-                    ▼
-                  FAILED
-```
+A notification follows this general lifecycle:
+
+1. A calling application submits a notification request to Pulse.
+2. Pulse validates the request and persists the notification with a `PENDING` status.
+3. An outbox event is created for asynchronous processing.
+4. The event is published to RabbitMQ.
+5. RabbitMQ routes the message to the appropriate notification channel queue.
+6. The channel consumer processes the message.
+7. Successful processing results in the notification being marked `SENT`.
+8. Failed processing is retried using exponential backoff.
+9. Messages that exhaust their configured retry attempts are routed to the channel's dead-letter queue.
+10. The dead-letter consumer marks the associated notification as `FAILED`.
 
 ---
 
-## RabbitMQ Topology
+## RabbitMQ
 
-The current notification topology consists of:
+Pulse uses RabbitMQ as its asynchronous message broker.
 
-```text
-pulse.notifications
-        │
-        │ email
-        ▼
-pulse.email
-        │
-        │ retry exhaustion
-        ▼
-pulse.notifications.dlx
-        │
-        │ email
-        ▼
-pulse.email.dlq
-```
+The notification exchange routes messages using channel-specific routing keys. Email and SMS currently have separate queues and dead-letter queues.
 
-The email queue is configured with a Dead Letter Exchange so messages that exhaust their retry attempts can be routed to the dedicated dead-letter queue.
+The queues are configured with dead-letter exchanges so messages that exhaust their retry attempts can be isolated from the primary processing queues.
 
 Dead-lettered messages retain RabbitMQ metadata such as `x-death`, allowing the failure history to be inspected.
 
@@ -166,44 +90,19 @@ Dead-lettered messages retain RabbitMQ metadata such as `x-death`, allowing the 
 
 Pulse currently uses RabbitMQ retry handling with exponential backoff.
 
-Example retry behaviour:
+Retries protect against transient failures such as temporary SMTP, SMS provider, or network failures while preventing permanently failing messages from remaining indefinitely in the primary queues.
 
-```text
-Initial failure
-      │
-      ├── wait
-      ▼
-Retry #1
-      │
-      ├── wait
-      ▼
-Retry #2
-      │
-      ├── wait
-      ▼
-Retry #3
-      │
-      ▼
-Retries exhausted
-      │
-      ▼
-Dead Letter Exchange
-      │
-      ▼
-Dead Letter Queue
-```
-
-This provides protection against transient failures such as temporary SMTP or network problems while preventing permanently failing messages from remaining indefinitely in the primary email queue.
+Once the configured retry attempts are exhausted, the message follows the dead-letter path for that notification channel.
 
 ---
 
 ## Idempotency
 
-Because message delivery systems can redeliver messages, Pulse checks the persisted notification state before processing an email.
+Because message delivery systems can redeliver messages, Pulse checks the persisted notification state before processing a notification.
 
-A notification that has already reached `SENT` should not be sent again if the same message is subsequently delivered.
+A notification that has already reached `SENT` should not be processed again if the same message is subsequently delivered.
 
-This is important because successful external delivery and RabbitMQ acknowledgement are separate events. A message may potentially be delivered more than once even when the external email provider has already accepted it.
+This is important because successful external delivery and RabbitMQ acknowledgement are separate events. A message may potentially be delivered more than once even when the external provider has already accepted it.
 
 ---
 
@@ -212,7 +111,7 @@ This is important because successful external delivery and RabbitMQ acknowledgem
 | Status    | Description                                                                  |
 | --------- | ---------------------------------------------------------------------------- |
 | `PENDING` | Notification has been created and is awaiting processing                     |
-| `SENT`    | Email processing completed successfully                                      |
+| `SENT`    | Notification processing completed successfully                               |
 | `FAILED`  | Notification permanently failed after exhausting the configured failure path |
 
 ---
@@ -223,28 +122,7 @@ The authentication service is currently used as a **test client** for Pulse.
 
 For example, during user registration:
 
-```text
-User Registration
-       │
-       ▼
-Auth Service
-       │
-       │ HTTP
-       ▼
-Pulse
-       │
-       ▼
-RabbitMQ
-       │
-       ▼
-Email Consumer
-       │
-       ▼
-SMTP
-       │
-       ▼
-Verification Email
-```
+User Registration → Auth Service → Pulse → RabbitMQ → Notification Consumer → Notification Provider
 
 This integration allows Pulse to be tested against a realistic application workflow without making Pulse dependent on authentication-specific logic.
 
@@ -252,20 +130,16 @@ As additional notification channels are implemented, other applications can cons
 
 ---
 
-## Planned Notification Channels
+## Notification Channels
 
-Pulse is intended to eventually support multiple notification channels:
+Pulse is designed around channel-specific notification processing.
 
-```text
-                 ┌── Email
-                 │
-                 ├── SMS
-Application ──► Pulse ──┼── Push Notifications
-                 │
-                 └── Future Channels
-```
+Current channels:
 
-The goal is to keep channel-specific delivery logic behind Pulse's notification infrastructure rather than duplicating notification functionality across individual applications.
+* **Email** — SMTP-based delivery
+* **SMS** — currently using a mock delivery implementation
+
+The channel-specific delivery logic is isolated from the core notification infrastructure, allowing additional channels to be introduced without coupling them to existing notification implementations.
 
 ---
 
@@ -274,13 +148,13 @@ The goal is to keep channel-specific delivery logic behind Pulse's notification 
 ### Current
 
 * Java 21
-* Spring Boot 3.x
+* Spring Boot 4.x
 * Spring Data JPA
 * Spring AMQP
 * RabbitMQ
 * PostgreSQL
 * Spring Mail / SMTP
-* Jackson
+* Unit testing
 * Maven
 
 ### Planned
@@ -294,26 +168,6 @@ The goal is to keep channel-specific delivery logic behind Pulse's notification 
 * Additional messaging and observability tooling where appropriate
 
 > Planned technologies are not currently part of the production implementation and will be added incrementally as the service evolves.
-
----
-
-## Project Structure
-
-```text
-src/main/java/com/ofentse/pulse/
-├── notification/
-│   ├── config/
-│   ├── controller/
-│   ├── dto/
-│   ├── email/
-│   ├── entity/
-│   ├── enums/
-│   ├── producer/
-│   ├── repository/
-│   └── service/
-│
-└── PulseApplication.java
-```
 
 ---
 
@@ -335,25 +189,7 @@ cd pulse
 
 ### Configure the application
 
-Configure PostgreSQL, RabbitMQ, and SMTP credentials through `application.properties` or environment variables.
-
-```properties
-server.port=8080
-
-spring.datasource.url=jdbc:postgresql://localhost:5432/pulse
-spring.datasource.username=postgres
-spring.datasource.password=your_password
-
-spring.rabbitmq.host=localhost
-spring.rabbitmq.port=5672
-spring.rabbitmq.username=guest
-spring.rabbitmq.password=guest
-
-spring.mail.host=smtp.example.com
-spring.mail.port=587
-spring.mail.username=your_email
-spring.mail.password=your_password
-```
+Configure PostgreSQL, RabbitMQ, and external notification provider credentials through your local application configuration or environment variables.
 
 Sensitive credentials should never be committed to source control.
 
@@ -365,6 +201,7 @@ Pulse is being developed incrementally toward a production-oriented notification
 
 * [x] Notification API
 * [x] Email delivery
+* [x] SMS notification flow
 * [x] Notification persistence
 * [x] Asynchronous RabbitMQ processing
 * [x] Retry handling
@@ -372,14 +209,14 @@ Pulse is being developed incrementally toward a production-oriented notification
 * [x] Dead Letter Exchange
 * [x] Dead Letter Queue
 * [x] Basic idempotency
-* [ ] Transactional Outbox
+* [x] Controller validation
+* [x] Unit testing
+* [ ] Transactional Outbox hardening
 * [ ] Notification templates
 * [ ] User preferences
 * [ ] Scheduled notifications
-* [ ] SMS
 * [ ] Push notifications
 * [ ] Redis
-* [ ] Automated testing
 * [ ] Docker / Docker Compose
 * [ ] CI/CD
 * [ ] Cloud deployment
