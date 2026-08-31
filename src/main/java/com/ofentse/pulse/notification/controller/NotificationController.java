@@ -2,7 +2,7 @@ package com.ofentse.pulse.notification.controller;
 
 import com.ofentse.pulse.notification.email.dto.EmailNotificationDTO;
 import com.ofentse.pulse.notification.service.NotificationService;
-import com.ofentse.pulse.notification.sms.dto.SmsNotificationDTO;
+import com.ofentse.pulse.notification.whatsapp.dto.WhatsAppNotificationDTO;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -25,9 +25,9 @@ public class NotificationController {
         return ResponseEntity.accepted().build();
     }
 
-    @PostMapping("/sms")
-    public ResponseEntity<Void> sendSmsNotification(@RequestBody @Valid SmsNotificationDTO dto) {
-        service.sendSmsNotification(dto);
+    @PostMapping("/whatsapp")
+    public ResponseEntity<Void> sendWhatsAppNotification(@RequestBody @Valid WhatsAppNotificationDTO dto) {
+        service.sendWhatsAppNotification(dto);
         return ResponseEntity.accepted().build();
     }
 }

@@ -1,4 +1,4 @@
-package com.ofentse.pulse.notification.sms.dto;
+package com.ofentse.pulse.notification.whatsapp.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -10,7 +10,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @Setter
 @Getter
-public class SmsNotificationDTO {
+public class WhatsAppNotificationDTO {
 
     @NotBlank(message = "Phone number is required")
     @Pattern(regexp = "^[+0-9][0-9\\s-]{7,19}$", message = "Please enter a valid phone number")

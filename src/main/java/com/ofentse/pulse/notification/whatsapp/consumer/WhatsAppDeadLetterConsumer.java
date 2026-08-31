@@ -1,24 +1,24 @@
-package com.ofentse.pulse.notification.sms.consumer;
+package com.ofentse.pulse.notification.whatsapp.consumer;
 
 import com.ofentse.pulse.notification.config.RabbitMQConfig;
 import com.ofentse.pulse.notification.entity.Notification;
 import com.ofentse.pulse.notification.enums.NotificationStatus;
 import com.ofentse.pulse.notification.exception.NotificationNotFoundException;
 import com.ofentse.pulse.notification.repository.NotificationRepo;
-import com.ofentse.pulse.notification.sms.dto.SmsNotificationMessage;
+import com.ofentse.pulse.notification.whatsapp.dto.WhatsAppNotificationMessage;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
 @Component
-public class SmsDeadLetterConsumer {
+public class WhatsAppDeadLetterConsumer {
 
     private final NotificationRepo notificationRepo;
-    public SmsDeadLetterConsumer(NotificationRepo notificationRepo) {
+    public WhatsAppDeadLetterConsumer(NotificationRepo notificationRepo) {
         this.notificationRepo = notificationRepo;
     }
 
-    @RabbitListener(queues = RabbitMQConfig.SMS_DLQ)
-    public void consumeDeadLetterSms(SmsNotificationMessage message) {
+    @RabbitListener(queues = RabbitMQConfig.WHATSAPP_DLQ)
+    public void consumeDeadLetterWhatsApp(WhatsAppNotificationMessage message) {
 
         Notification notification = notificationRepo.findById(message.getNotificationId())
                 .orElseThrow(

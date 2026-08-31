@@ -2,7 +2,7 @@ package com.ofentse.pulse.notification.producer;
 
 import com.ofentse.pulse.notification.config.RabbitMQConfig;
 import com.ofentse.pulse.notification.email.dto.EmailNotificationMessage;
-import com.ofentse.pulse.notification.sms.dto.SmsNotificationMessage;
+import com.ofentse.pulse.notification.whatsapp.dto.WhatsAppNotificationMessage;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 
@@ -21,10 +21,10 @@ public class NotificationProducer {
         );
     }
 
-    public void publishSms(SmsNotificationMessage message) {
+    public void publishWhatsApp(WhatsAppNotificationMessage message) {
         rabbitTemplate.convertAndSend(
                 RabbitMQConfig.EXCHANGE,
-                RabbitMQConfig.SMS_ROUTING_KEY,
+                RabbitMQConfig.WHATSAPP_ROUTING_KEY,
                 message
         );
     }

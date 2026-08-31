@@ -1,10 +1,10 @@
-package com.ofentse.pulse.notification.sms.consumer;
+package com.ofentse.pulse.notification.whatsapp.consumer;
 
 import com.ofentse.pulse.notification.entity.Notification;
 import com.ofentse.pulse.notification.enums.NotificationStatus;
 import com.ofentse.pulse.notification.exception.NotificationNotFoundException;
 import com.ofentse.pulse.notification.repository.NotificationRepo;
-import com.ofentse.pulse.notification.sms.dto.SmsNotificationMessage;
+import com.ofentse.pulse.notification.whatsapp.dto.WhatsAppNotificationMessage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -23,20 +23,20 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class SmsDeadLetterConsumerTest {
+class WhatsAppDeadLetterConsumerTest {
 
     @Mock
     private NotificationRepo notificationRepo;
 
     @InjectMocks
-    private SmsDeadLetterConsumer deadLetterConsumer;
+    private WhatsAppDeadLetterConsumer deadLetterConsumer;
 
-    private SmsNotificationMessage message;
+    private WhatsAppNotificationMessage message;
     private Notification notification;
 
     @BeforeEach
     void setup() {
-        message = new SmsNotificationMessage(
+        message = new WhatsAppNotificationMessage(
                 1L,
                 "12345678890",
                 "Welcome to pulse."
@@ -48,21 +48,21 @@ class SmsDeadLetterConsumerTest {
     }
 
     @Nested
-    @DisplayName("ConsumeFailedSms")
-    class ConsumeDeadLetterSms {
+    @DisplayName("ConsumeFailedWhatsApp")
+    class ConsumeDeadLetterWhatsApp {
 
         @Test
-        @DisplayName("ConsumeFailedSms - Success")
-        void consumeDeadLetterSms_SavesMessageAsFailed() {
+        @DisplayName("ConsumeFailedWhatsapp - Success")
+        void consumeDeadLetterWhatsapp_SavesMessageAsFailed() {
 
             when(notificationRepo.findById(message.getNotificationId()))
                     .thenReturn(Optional.of(notification));
 
-            deadLetterConsumer.consumeDeadLetterSms(message);
+            deadLetterConsumer.consumeDeadLetterWhatsApp(message);
 
-            ArgumentCaptor<Notification> smsCaptor = ArgumentCaptor.forClass(Notification.class);
-            verify(notificationRepo).save(smsCaptor.capture());
-            Notification capturedNotification = smsCaptor.getValue();
+            ArgumentCaptor<Notification> whatsAppCaptor = ArgumentCaptor.forClass(Notification.class);
+            verify(notificationRepo).save(whatsAppCaptor.capture());
+            Notification capturedNotification = whatsAppCaptor.getValue();
 
             assertEquals(NotificationStatus.FAILED, capturedNotification.getStatus());
             assertEquals(1L, capturedNotification.getId());
@@ -71,12 +71,12 @@ class SmsDeadLetterConsumerTest {
         }
 
         @Test
-        @DisplayName("ConsumeFailedSms - Throws Exception When Notification Not Found")
-        void ConsumeDeadLetterSms_ThrowsNotificationNotFoundException_WhenNotificationIsNotFound() {
+        @DisplayName("ConsumeFailedWhatsapp - Throws Exception When Notification Not Found")
+        void ConsumeDeadLetterWhatsapp_ThrowsNotificationNotFoundException_WhenNotificationIsNotFound() {
             NotificationNotFoundException exception = assertThrows(
                     NotificationNotFoundException.class,
                     () ->  deadLetterConsumer
-                            .consumeDeadLetterSms(message)
+                            .consumeDeadLetterWhatsApp(message)
             );
 
             assertNotNull(exception);
@@ -87,14 +87,14 @@ class SmsDeadLetterConsumerTest {
         }
 
         @Test
-        @DisplayName("ConsumeFailedSms - Return when sms has already Failed")
-        void ConsumeDeadLetterSms_ReturnsWithoutSaving_WhenNotificationHasAlreadyFailed() {
+        @DisplayName("ConsumeFailedWhatsapp - Return when whatsapp has already Failed")
+        void ConsumeDeadLetterWhatsapp_ReturnsWithoutSaving_WhenNotificationHasAlreadyFailed() {
 
             notification.setStatus(NotificationStatus.FAILED);
             when(notificationRepo.findById(message.getNotificationId()))
                     .thenReturn(Optional.of(notification));
 
-            deadLetterConsumer.consumeDeadLetterSms(message);
+            deadLetterConsumer.consumeDeadLetterWhatsApp(message);
 
             verify(notificationRepo).findById(notification.getId());
             verify(notificationRepo, never()).save(notification);

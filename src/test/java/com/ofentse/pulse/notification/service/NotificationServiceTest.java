@@ -9,8 +9,8 @@ import com.ofentse.pulse.notification.enums.OutboxEventStatus;
 import com.ofentse.pulse.notification.event.OutboxEventCreated;
 import com.ofentse.pulse.notification.repository.NotificationRepo;
 import com.ofentse.pulse.notification.repository.OutboxEventRepo;
-import com.ofentse.pulse.notification.sms.dto.SmsNotificationDTO;
-import com.ofentse.pulse.notification.sms.dto.SmsNotificationMessage;
+import com.ofentse.pulse.notification.whatsapp.dto.WhatsAppNotificationDTO;
+import com.ofentse.pulse.notification.whatsapp.dto.WhatsAppNotificationMessage;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -44,7 +44,7 @@ class NotificationServiceTest {
     private NotificationService notificationService;
 
     private EmailNotificationDTO emailDTO;
-    private SmsNotificationDTO smsDTO;
+    private WhatsAppNotificationDTO whatsAppDTO;
     private Notification notification;
 
     @BeforeEach
@@ -56,7 +56,7 @@ class NotificationServiceTest {
                 "Hello from Pulse"
         );
 
-        smsDTO = new SmsNotificationDTO(
+        whatsAppDTO = new WhatsAppNotificationDTO(
                 "1234567890",
                 "Welcome to pulse."
         );
@@ -102,20 +102,20 @@ class NotificationServiceTest {
     }
 
     @Nested
-    @DisplayName("SendSmsNotification")
-    class SendSmsNotification {
+    @DisplayName("SendWhatsAppNotification")
+    class SendWhatsAppNotification {
 
         @Test
-        @DisplayName("SendSmsNotification - Success")
-        void sendSmsNotification_PublishEventAndSavesOutbox_WhenDTOIsValid() {
+        @DisplayName("SendWhatsAppNotification - Success")
+        void sendWhatsAppNotification_PublishEventAndSavesOutbox_WhenDTOIsValid() {
 
-            notification.setRecipient(smsDTO.getTo());
+            notification.setRecipient(whatsAppDTO.getTo());
 
-            when(objectMapper.writeValueAsString(any(SmsNotificationMessage.class))).thenReturn("Payload");
+            when(objectMapper.writeValueAsString(any(WhatsAppNotificationMessage.class))).thenReturn("Payload");
             when(notificationRepo.save(any(Notification.class))).thenReturn(notification);
             when(outboxEventRepo.save(any(OutboxEvent.class))).thenReturn(new OutboxEvent());
 
-            notificationService.sendSmsNotification(smsDTO);
+            notificationService.sendWhatsAppNotification(whatsAppDTO);
 
             ArgumentCaptor<Notification> captor1 = ArgumentCaptor.forClass(Notification.class);
             verify(notificationRepo).save(captor1.capture());

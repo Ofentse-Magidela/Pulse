@@ -18,11 +18,11 @@ public class RabbitMQConfig {
     public static final String EMAIL_DLQ = "pulse.email.dlq";
     public static final String EMAIL_DLQ_ROUTING_KEY =  "email";
 
-    public static final String SMS_QUEUE = "pulse.sms";
-    public static final String SMS_DLQ = "pulse.sms.dlq";
+    public static final String WHATSAPP_QUEUE = "pulse.whatsapp";
+    public static final String WHATSAPP_DLQ = "pulse.whatsapp.dlq";
 
-    public static final String SMS_ROUTING_KEY = "sms";
-    public static final String SMS_DLQ_ROUTING_KEY = "sms";
+    public static final String WHATSAPP_ROUTING_KEY = "whatsapp";
+    public static final String WHATSAPP_DLQ_ROUTING_KEY = "whatsapp";
 
     @Bean
     public DirectExchange notificationExchange() {
@@ -68,37 +68,37 @@ public class RabbitMQConfig {
                 .with(EMAIL_DLQ_ROUTING_KEY);
     }
 
-    //SMS Beans
+    //WhatsApp Beans
 
     @Bean
-    public Queue smsQueue() {
+    public Queue whatsappQueue() {
         return QueueBuilder
-                .durable(SMS_QUEUE)
+                .durable(WHATSAPP_QUEUE)
                 .classic()
                 .deadLetterExchange(DLX_EXCHANGE)
-                .deadLetterRoutingKey(SMS_DLQ_ROUTING_KEY)
+                .deadLetterRoutingKey(WHATSAPP_DLQ_ROUTING_KEY)
                 .build();
     }
 
     @Bean
-    public Binding smsBinding(@Qualifier("smsQueue") Queue smsQueue, DirectExchange notificationExchange) {
+    public Binding whatsappBinding(@Qualifier("whatsappQueue") Queue whatsappQueue, DirectExchange notificationExchange) {
         return BindingBuilder
-                .bind(smsQueue)
+                .bind(whatsappQueue)
                 .to(notificationExchange)
-                .with(SMS_ROUTING_KEY);
+                .with(WHATSAPP_ROUTING_KEY);
     }
 
     @Bean
-    public Queue smsDeadLetterQueue() {
-        return new Queue(SMS_DLQ, true);
+    public Queue whatsappDeadLetterQueue() {
+        return new Queue(WHATSAPP_DLQ, true);
     }
 
     @Bean
-    public Binding smsDeadLetterBinding(Queue smsDeadLetterQueue, DirectExchange deadLetterExchange) {
+    public Binding whatsappDeadLetterBinding(Queue whatsappDeadLetterQueue, DirectExchange deadLetterExchange) {
         return BindingBuilder
-                .bind(smsDeadLetterQueue)
+                .bind(whatsappDeadLetterQueue)
                 .to(deadLetterExchange)
-                .with(SMS_DLQ_ROUTING_KEY);
+                .with(WHATSAPP_DLQ_ROUTING_KEY);
     }
 
     @Bean

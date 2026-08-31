@@ -2,7 +2,7 @@ package com.ofentse.pulse.notification.controller;
 
 import com.ofentse.pulse.notification.email.dto.EmailNotificationDTO;
 import com.ofentse.pulse.notification.service.NotificationService;
-import com.ofentse.pulse.notification.sms.dto.SmsNotificationDTO;
+import com.ofentse.pulse.notification.whatsapp.dto.WhatsAppNotificationDTO;
 import com.ofentse.pulse.security.JwtService;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,7 +35,7 @@ class NotificationControllerTest {
     private JwtService jwtService;
 
     private EmailNotificationDTO emailDTO;
-    private SmsNotificationDTO smsDTO;
+    private WhatsAppNotificationDTO whatsAppDTO;
 
     @BeforeEach
     void setup() {
@@ -45,7 +45,7 @@ class NotificationControllerTest {
                 "Hello from Pulse"
         );
 
-        smsDTO = new SmsNotificationDTO(
+        whatsAppDTO = new WhatsAppNotificationDTO(
                 "1234567890",
                 "Welcome to Pulse"
         );
@@ -84,31 +84,31 @@ class NotificationControllerTest {
     }
 
     @Nested
-    @DisplayName("POST /notifications/sms")
-    class sendSmsNotification {
+    @DisplayName("POST /notifications/whatsapp")
+    class sendWhatsAppNotification {
 
         @Test
-        @DisplayName("Returns 202 Accepted when smsDTO is valid")
-        void sendSmsNotification_Returns202Accepted_whenDTOIsValid() throws Exception {
+        @DisplayName("Returns 202 Accepted when whatsAppDTO is valid")
+        void sendWhatsAppNotification_Returns202Accepted_whenDTOIsValid() throws Exception {
 
-            doNothing().when(notificationService).sendSmsNotification(any(SmsNotificationDTO.class));
+            doNothing().when(notificationService).sendWhatsAppNotification((any(WhatsAppNotificationDTO.class)));
 
-            mockMvc.perform(post("/notifications/sms")
+            mockMvc.perform(post("/notifications/whatsapp")
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(smsDTO)))
+                    .content(objectMapper.writeValueAsString(whatsAppDTO)))
                     .andExpect(status().isAccepted());
 
-            verify(notificationService).sendSmsNotification(any(SmsNotificationDTO.class));
+            verify(notificationService).sendWhatsAppNotification(any(WhatsAppNotificationDTO.class));
         }
 
         @Test
         @DisplayName("Returns 400 Bad Request when 'to' is blank")
-        void sendSmsNotification_Returns400BadRequest_whenToIsBlank() throws Exception{
-            smsDTO.setTo("  ");
+        void sendWhatsAppNotification_Returns400BadRequest_whenToIsBlank() throws Exception{
+            whatsAppDTO.setTo("  ");
 
-            mockMvc.perform(post("/notifications/sms")
+            mockMvc.perform(post("/notifications/whatsapp")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(smsDTO)))
+                            .content(objectMapper.writeValueAsString(whatsAppDTO)))
                     .andExpect(status().isBadRequest());
 
             verifyNoInteractions(notificationService);
@@ -116,12 +116,12 @@ class NotificationControllerTest {
 
         @Test
         @DisplayName("Returns 400 Bad Request when 'contents' is blank")
-        void sendSmsNotification_Returns400BadRequest_whenContentIsBlank() throws Exception{
-            smsDTO.setContent("  ");
+        void sendWhatsAppNotification_Returns400BadRequest_whenContentIsBlank() throws Exception{
+            whatsAppDTO.setContent("  ");
 
-            mockMvc.perform(post("/notifications/sms")
+            mockMvc.perform(post("/notifications/whatsapp")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(smsDTO)))
+                            .content(objectMapper.writeValueAsString(whatsAppDTO)))
                     .andExpect(status().isBadRequest());
 
             verifyNoInteractions(notificationService);
@@ -129,12 +129,12 @@ class NotificationControllerTest {
 
         @Test
         @DisplayName("Returns 400 Bad Request when content exceeds maximum length")
-        void sendSmsNotification_Returns400BadRequest_whenContentIsTooLong() throws Exception {
-            smsDTO.setContent("a".repeat(10_001));
+        void sendWhatsAppNotification_Returns400BadRequest_whenContentIsTooLong() throws Exception {
+            whatsAppDTO.setContent("a".repeat(10_001));
 
-            mockMvc.perform(post("/notifications/sms")
+            mockMvc.perform(post("/notifications/whatsapp")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(smsDTO)))
+                            .content(objectMapper.writeValueAsString(whatsAppDTO)))
                     .andExpect(status().isBadRequest());
 
             verifyNoInteractions(notificationService);

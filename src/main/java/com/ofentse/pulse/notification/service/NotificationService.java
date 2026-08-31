@@ -10,8 +10,8 @@ import com.ofentse.pulse.notification.enums.OutboxEventStatus;
 import com.ofentse.pulse.notification.event.OutboxEventCreated;
 import com.ofentse.pulse.notification.repository.NotificationRepo;
 import com.ofentse.pulse.notification.repository.OutboxEventRepo;
-import com.ofentse.pulse.notification.sms.dto.SmsNotificationDTO;
-import com.ofentse.pulse.notification.sms.dto.SmsNotificationMessage;
+import com.ofentse.pulse.notification.whatsapp.dto.WhatsAppNotificationDTO;
+import com.ofentse.pulse.notification.whatsapp.dto.WhatsAppNotificationMessage;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -61,17 +61,17 @@ public class NotificationService {
     }
 
     @Transactional
-    public void sendSmsNotification(SmsNotificationDTO dto) {
+    public void sendWhatsAppNotification(WhatsAppNotificationDTO dto) {
         Notification notification = new Notification();
 
-        notification.setChannel(NotificationChannel.SMS);
+        notification.setChannel(NotificationChannel.WHATSAPP);
         notification.setRecipient(dto.getTo());
         notification.setCreatedAt(LocalDateTime.now());
         notification.setStatus(NotificationStatus.PENDING);
 
         repo.save(notification);
 
-        SmsNotificationMessage message = new SmsNotificationMessage(
+        WhatsAppNotificationMessage message = new WhatsAppNotificationMessage(
                 notification.getId(),
                 dto.getTo(),
                 dto.getContent()

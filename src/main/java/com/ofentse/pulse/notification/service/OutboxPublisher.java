@@ -4,7 +4,7 @@ import com.ofentse.pulse.notification.email.dto.EmailNotificationMessage;
 import com.ofentse.pulse.notification.entity.OutboxEvent;
 import com.ofentse.pulse.notification.enums.NotificationChannel;
 import com.ofentse.pulse.notification.producer.NotificationProducer;
-import com.ofentse.pulse.notification.sms.dto.SmsNotificationMessage;
+import com.ofentse.pulse.notification.whatsapp.dto.WhatsAppNotificationMessage;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
@@ -35,13 +35,12 @@ public class OutboxPublisher {
 
                     producer.publishEmail(message);
                 }
-
-                case SMS -> {
-                    SmsNotificationMessage message = objectMapper.readValue(
-                            event.getPayload(), SmsNotificationMessage.class
+                case WHATSAPP -> {
+                    WhatsAppNotificationMessage message = objectMapper.readValue(
+                            event.getPayload(), WhatsAppNotificationMessage.class
                     );
 
-                    producer.publishSms(message);
+                    producer.publishWhatsApp(message);
                 }
             }
 

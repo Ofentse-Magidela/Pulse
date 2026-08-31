@@ -2,6 +2,7 @@ package com.ofentse.pulse.notification.producer;
 
 import com.ofentse.pulse.notification.config.RabbitMQConfig;
 import com.ofentse.pulse.notification.email.dto.EmailNotificationMessage;
+import com.ofentse.pulse.notification.whatsapp.dto.WhatsAppNotificationMessage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -24,14 +25,21 @@ class NotificationProducerTest {
     @InjectMocks
     private NotificationProducer producer;
 
-    private EmailNotificationMessage message;
+    private EmailNotificationMessage emailMessage;
+    private WhatsAppNotificationMessage whatsAppMessage;
 
     @BeforeEach
     void setup() {
-        message = new EmailNotificationMessage(
+        emailMessage = new EmailNotificationMessage(
                 1L,
                 "new@gmail.com",
                 "Welcome",
+                "Welcome to pulse."
+        );
+
+        whatsAppMessage = new WhatsAppNotificationMessage(
+                2L,
+                "1234567890",
                 "Welcome to pulse."
         );
     }
@@ -44,12 +52,12 @@ class NotificationProducerTest {
         @DisplayName("Publish Email to RabbitMQ - Success")
         void publishEmail_PublishEmailToEmailQueue_whenRabbitIsAvailable() {
 
-            producer.publishEmail(message);
+            producer.publishEmail(emailMessage);
 
             verify(rabbitTemplate, times(1)).convertAndSend(
                     RabbitMQConfig.EXCHANGE,
                     RabbitMQConfig.EMAIL_ROUTING_KEY,
-                    message
+                    emailMessage
             );
         }
 
@@ -61,12 +69,12 @@ class NotificationProducerTest {
             doThrow(exception).when(rabbitTemplate).convertAndSend(
                     RabbitMQConfig.EXCHANGE,
                     RabbitMQConfig.EMAIL_ROUTING_KEY,
-                    message
+                    emailMessage
             );
 
             RuntimeException thrown = assertThrows(
                     RuntimeException.class,
-                    () -> producer.publishEmail(message)
+                    () -> producer.publishEmail(emailMessage)
             );
 
             assertEquals("RabbitMQ is unavailable", thrown.getMessage());
@@ -74,8 +82,52 @@ class NotificationProducerTest {
             verify(rabbitTemplate, times(1)).convertAndSend(
                     RabbitMQConfig.EXCHANGE,
                     RabbitMQConfig.EMAIL_ROUTING_KEY,
-                    message
+                    emailMessage
             );
         }
     }
+
+    @Nested
+    @DisplayName("Publish WhatsApp to RabbitMQ")
+    class publishWhatsApp {
+
+        @Test
+        @DisplayName("Publish WhatsApp to RabbitMQ - Success")
+        void publishWhatsApp_PublishWhatsAppToWhatsAppQueue_whenRabbitIsAvailable() {
+
+            producer.publishWhatsApp(whatsAppMessage);
+
+            verify(rabbitTemplate, times(1)).convertAndSend(
+                    RabbitMQConfig.EXCHANGE,
+                    RabbitMQConfig.EMAIL_ROUTING_KEY,
+                    whatsAppMessage
+            );
+        }
+
+        @Test
+        @DisplayName("Propagates exception when RabbitMQ publish fails")
+        void publishWhatsApp_ThrowsException_whenRabbitIsUnavailable() {
+            Exception exception = new RuntimeException("RabbitMQ is unavailable");
+
+            doThrow(exception).when(rabbitTemplate).convertAndSend(
+                    RabbitMQConfig.EXCHANGE,
+                    RabbitMQConfig.WHATSAPP_ROUTING_KEY,
+                    whatsAppMessage
+            );
+
+            RuntimeException thrown = assertThrows(
+                    RuntimeException.class,
+                    () -> producer.publishWhatsApp(whatsAppMessage)
+            );
+
+            assertEquals("RabbitMQ is unavailable", thrown.getMessage());
+
+            verify(rabbitTemplate, times(1)).convertAndSend(
+                    RabbitMQConfig.EXCHANGE,
+                    RabbitMQConfig.WHATSAPP_ROUTING_KEY,
+                    whatsAppMessage
+            );
+        }
+    }
+
 }
