@@ -12,6 +12,8 @@ import com.ofentse.pulse.notification.repository.NotificationRepo;
 import com.ofentse.pulse.notification.repository.OutboxEventRepo;
 import com.ofentse.pulse.notification.whatsapp.dto.WhatsAppNotificationDTO;
 import com.ofentse.pulse.notification.whatsapp.dto.WhatsAppNotificationMessage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,8 +21,11 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.time.LocalDateTime;
 
+
 @Service
 public class NotificationService {
+
+    private static final Logger log = LoggerFactory.getLogger(NotificationService.class);
 
     private final NotificationRepo repo;
     private final ObjectMapper objectMapper;
@@ -47,6 +52,8 @@ public class NotificationService {
 
         repo.save(notification);
 
+        log.info("Email notification {} created with status PENDING", notification.getId());
+
         EmailNotificationMessage message =
                 new EmailNotificationMessage(
                         notification.getId(),
@@ -58,6 +65,8 @@ public class NotificationService {
         saveOutboxEvent(message, notification);
 
         applicationEventPublisher.publishEvent(new OutboxEventCreated());
+
+        log.info("OutboxEventCreated published for notification {}", notification.getId());
     }
 
     @Transactional
@@ -71,6 +80,8 @@ public class NotificationService {
 
         repo.save(notification);
 
+        log.info("WhatsApp notification {} created with status PENDING", notification.getId());
+
         WhatsAppNotificationMessage message = new WhatsAppNotificationMessage(
                 notification.getId(),
                 dto.getTo(),
@@ -80,6 +91,8 @@ public class NotificationService {
         saveOutboxEvent(message, notification);
 
         applicationEventPublisher.publishEvent(new OutboxEventCreated());
+
+        log.info("OutboxEventCreated published for notification {}", notification.getId());
     }
 
     private <T> void saveOutboxEvent(T message, Notification notification) {
@@ -97,5 +110,9 @@ public class NotificationService {
         outbox.setNextRetryAt(now);
 
         outboxRepo.save(outbox);
+
+        log.info(
+                "Outbox event {} created for notification {} with status PENDING", outbox.getId(), notification.getId()
+        );
     }
 }
