@@ -7,139 +7,67 @@
 ![Spring AMQP](https://img.shields.io/badge/Spring%20AMQP-Message%20Processing-6DB33F?logo=spring\&logoColor=white)
 ![Status](https://img.shields.io/badge/Status-In%20Development-yellow)
 
-A standalone notification service built with **Spring Boot** for handling asynchronous application notifications.
+A standalone **Spring Boot notification service** for handling asynchronous application notifications.
 
-Pulse provides a centralized notification pipeline that can be consumed by multiple applications and services. It currently supports **email and SMS notifications**, with RabbitMQ providing asynchronous message processing, retry handling, and dead-lettering.
-
-The authentication service currently acts as a **test/integration client** for Pulse. It provides a realistic application workflow for testing notification delivery while keeping Pulse independent from authentication-specific business logic.
+Pulse provides a centralized notification pipeline that can be consumed by multiple applications and services. It currently supports **email and WhatsApp notifications**, with RabbitMQ handling asynchronous processing, retries, and dead-lettering.
 
 ---
 
 ## Features
 
-### Current
-
-* Email notifications
-* SMS notifications
-* Asynchronous processing with RabbitMQ
+* Email notifications via SMTP
+* WhatsApp notifications via Meta WhatsApp Cloud API
+* Transactional outbox
+* Asynchronous RabbitMQ processing
 * Retry handling with exponential backoff
 * Dead-letter queues
 * Notification persistence and status tracking
-* Basic validation and idempotency
+* Basic idempotency
+* Request validation
+* Application logging
 * Unit and integration testing
-
-### Planned
-
-* Push notifications
-* Notification templates
-* User notification preferences
-* Scheduled notifications
-* Transactional Outbox hardening
-* Notification replay/recovery
-* Redis-based caching and supporting infrastructure where appropriate
-* Application metrics and observability
-* Docker / Docker Compose
-* CI/CD with GitHub Actions
-* Cloud deployment
-* Improved monitoring and alerting
 
 ---
 
 ## Architecture
 
-Pulse is designed as an independent notification service rather than an authentication-specific component.
+```text
+Calling Application --> Pulse REST API --> PostgreSQL + Outbox --> Outbox Publisher --> RabbitMQ
+                                                                                         |
+                                                                                         +--> Email Consumer --> SMTP
+                                                                                         |
+                                                                                         +--> WhatsApp Consumer --> Meta Cloud API
+```
 
-Calling applications submit notification requests to Pulse over HTTP. Pulse persists the notification and creates an outbox event for asynchronous processing. RabbitMQ then routes the event to the appropriate channel-specific queue.
-
-Each notification channel has its own consumer and delivery implementation. Failed messages are retried using the configured retry strategy and eventually routed through the appropriate dead-letter path when retries are exhausted.
-
-The authentication service currently acts as an integration client, but Pulse is not coupled to it and can be consumed by other applications.
-
----
-
-## Notification Lifecycle
-
-A notification follows this general lifecycle:
-
-1. A calling application submits a notification request to Pulse.
-2. Pulse validates the request and persists the notification with a `PENDING` status.
-3. An outbox event is created for asynchronous processing.
-4. The event is published to RabbitMQ.
-5. RabbitMQ routes the message to the appropriate notification channel queue.
-6. The channel consumer processes the message.
-7. Successful processing results in the notification being marked `SENT`.
-8. Failed processing is retried using exponential backoff.
-9. Messages that exhaust their configured retry attempts are routed to the channel's dead-letter queue.
-10. The dead-letter consumer marks the associated notification as `FAILED`.
-
----
-
-## RabbitMQ
-
-Pulse uses RabbitMQ as its asynchronous message broker.
-
-The notification exchange routes messages using channel-specific routing keys. Email and SMS currently have separate queues and dead-letter queues.
-
-The queues are configured with dead-letter exchanges so messages that exhaust their retry attempts can be isolated from the primary processing queues.
-
-Dead-lettered messages retain RabbitMQ metadata such as `x-death`, allowing the failure history to be inspected.
+Pulse is designed to remain independent of the applications that consume it. The authentication service currently acts as an integration client for testing the notification workflow.
 
 ---
 
 ## Reliability
 
-Pulse currently uses RabbitMQ retry handling with exponential backoff.
+Pulse uses retry handling at both the outbox and RabbitMQ consumer levels.
 
-Retries protect against transient failures such as temporary SMTP, SMS provider, or network failures while preventing permanently failing messages from remaining indefinitely in the primary queues.
+**Outbox publishing**
 
-Once the configured retry attempts are exhausted, the message follows the dead-letter path for that notification channel.
+Failed publishing attempts are persisted and retried using increasing retry intervals before the event is marked `FAILED`.
 
----
+**RabbitMQ consumers**
 
-## Idempotency
+Consumer failures use exponential backoff with a configured maximum number of attempts. Messages that exhaust their retries are routed to channel-specific dead-letter queues.
 
-Because message delivery systems can redeliver messages, Pulse checks the persisted notification state before processing a notification.
-
-A notification that has already reached `SENT` should not be processed again if the same message is subsequently delivered.
-
-This is important because successful external delivery and RabbitMQ acknowledgement are separate events. A message may potentially be delivered more than once even when the external provider has already accepted it.
+Notifications also use persisted status checks to prevent already-sent notifications from being processed again after message redelivery.
 
 ---
 
-## Notification Status
+## WhatsApp Integration
 
-| Status    | Description                                                                  |
-| --------- | ---------------------------------------------------------------------------- |
-| `PENDING` | Notification has been created and is awaiting processing                     |
-| `SENT`    | Notification processing completed successfully                               |
-| `FAILED`  | Notification permanently failed after exhausting the configured failure path |
+Pulse integrates with the **Meta WhatsApp Cloud API** using Spring `RestClient`.
 
----
+```text
+Pulse --> WhatsAppApiClient --HTTPS--> Meta Graph API --> WhatsApp recipient
+```
 
-## Integration Testing
-
-The authentication service is currently used as a **test client** for Pulse.
-
-For example, during user registration:
-
-User Registration → Auth Service → Pulse → RabbitMQ → Notification Consumer → Notification Provider
-
-This integration allows Pulse to be tested against a realistic application workflow without making Pulse dependent on authentication-specific logic.
-
-As additional notification channels are implemented, other applications can consume Pulse through the same notification API.
-
----
-
-## Notification Channels
-
-Pulse is designed around channel-specific notification processing.
-
-Current channels:
-
-* **Email** — SMTP-based delivery
-* **SMS** — currently using a mock delivery implementation
-
-The channel-specific delivery logic is isolated from the core notification infrastructure, allowing additional channels to be introduced without coupling them to existing notification implementations.
+The provider integration uses a dedicated DTO for the Meta API payload, keeping the external provider's request structure separate from Pulse's internal notification model.
 
 ---
 
@@ -154,20 +82,25 @@ The channel-specific delivery logic is isolated from the core notification infra
 * RabbitMQ
 * PostgreSQL
 * Spring Mail / SMTP
-* Unit testing
+* Meta WhatsApp Cloud API
+* Spring RestClient
+* SLF4J / Logback
+* JUnit
+* Mockito
 * Maven
 
 ### Planned
 
 * Redis
-* Docker
-* Docker Compose
+* Rate limiting
+* Docker / Docker Compose
 * GitHub Actions
 * AWS
 * Micrometer / Prometheus
-* Additional messaging and observability tooling where appropriate
-
-> Planned technologies are not currently part of the production implementation and will be added incrementally as the service evolves.
+* Monitoring and alerting
+* Notification templates
+* Scheduled notifications
+* Push notifications
 
 ---
 
@@ -179,49 +112,50 @@ The channel-specific delivery logic is isolated from the core notification infra
 * Maven 3.8+
 * PostgreSQL
 * RabbitMQ
+* Meta WhatsApp Cloud API credentials for WhatsApp testing
 
-### Clone the repository
+### Clone
 
 ```bash
 git clone https://github.com/Ofentse-Magidela/pulse.git
 cd pulse
 ```
 
-### Configure the application
+### Configuration
 
-Configure PostgreSQL, RabbitMQ, and external notification provider credentials through your local application configuration or environment variables.
+Configure PostgreSQL, RabbitMQ, SMTP, and WhatsApp credentials through your local configuration or environment variables.
 
-Sensitive credentials should never be committed to source control.
+Required WhatsApp configuration includes:
+
+* Meta Graph API version
+* WhatsApp Phone Number ID
+* WhatsApp access token
+
+**Never commit credentials or other sensitive configuration to source control.**
 
 ---
 
 ## Roadmap
 
-Pulse is being developed incrementally toward a production-oriented notification platform.
-
 * [x] Notification API
 * [x] Email delivery
-* [x] SMS notification flow
-* [x] Notification persistence
-* [x] Asynchronous RabbitMQ processing
+* [x] WhatsApp delivery
+* [x] Meta WhatsApp Cloud API integration
+* [x] Transactional outbox
+* [x] RabbitMQ asynchronous processing
 * [x] Retry handling
 * [x] Exponential backoff
-* [x] Dead Letter Exchange
-* [x] Dead Letter Queue
+* [x] Dead Letter Exchange / Queue
 * [x] Basic idempotency
-* [x] Controller validation
-* [x] Unit testing
-* [ ] Transactional Outbox hardening
-* [ ] Notification templates
-* [ ] User preferences
-* [ ] Scheduled notifications
-* [ ] Push notifications
+* [x] Request validation
 * [ ] Redis
+* [ ] Rate limiting
+* [ ] Notification templates
+* [ ] Scheduled notifications
 * [ ] Docker / Docker Compose
 * [ ] CI/CD
-* [ ] Cloud deployment
+* [ ] AWS deployment
 * [ ] Metrics and observability
-* [ ] Monitoring and alerting
 
 ---
 
