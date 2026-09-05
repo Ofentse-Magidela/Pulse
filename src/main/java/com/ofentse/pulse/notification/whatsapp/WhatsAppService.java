@@ -26,9 +26,12 @@ public class WhatsAppService {
 
     public void sendWhatsApp(WhatsAppNotificationMessage message) {
 
+        log.info("Processing WhatsApp notification {}", message.getNotificationId());
+
         Notification notification = notificationRepo.findById(message.getNotificationId())
                 .orElseThrow(() -> {
-                            log.warn("Notification {} not found; message will be retried", message.getNotificationId());
+
+                            log.warn("Notification {} not found message will be retried", message.getNotificationId());
 
                             return new NotificationNotFoundException(
                                     "notification", "Notification with ID: " + message.getNotificationId() + " not found.");
@@ -37,13 +40,13 @@ public class WhatsAppService {
 
         if (notification.getStatus() == NotificationStatus.SENT) {
 
-            log.info("Notification {} already SENT; skipping duplicate WhatsApp message", notification.getId());
+            log.info("Notification {} already SENT skipping duplicate WhatsApp message", notification.getId());
             return;
         }
 
         whatsAppApiClient.sendMessage(message);
 
-        log.info("WhatsApp message successfully sent for notification {}", notification.getId());
+        log.info("WhatsApp message accepted by provider for notification {}", notification.getId());
 
         notification.setStatus(NotificationStatus.SENT);
         notification.setSentAt(LocalDateTime.now());

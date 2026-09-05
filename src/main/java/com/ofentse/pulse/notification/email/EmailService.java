@@ -32,6 +32,8 @@ public class EmailService {
 
     public void sendEmail(EmailNotificationMessage message) {
 
+        log.info("Processing Email notification {}", message.getNotificationId());
+
         SimpleMailMessage email = new SimpleMailMessage();
 
         email.setFrom(mailUsername);
@@ -41,7 +43,7 @@ public class EmailService {
 
         Notification notification = notificationRepo.findById(message.getNotificationId())
                 .orElseThrow(() -> {
-                        log.warn("Notification {} not found; message will be retried", message.getNotificationId());
+                        log.warn("Notification {} not found message will be retried", message.getNotificationId());
 
                             return new NotificationNotFoundException(
                                     "notification", "Notification with ID: " + message.getNotificationId() + " not found.");
@@ -50,13 +52,13 @@ public class EmailService {
 
         if (notification.getStatus() == NotificationStatus.SENT) {
 
-            log.info("Notification {} already SENT; skipping duplicate email", notification.getId());
+            log.info("Notification {} already SENT skipping duplicate email", notification.getId());
             return;
         }
 
         mailSender.send(email);
 
-        log.info("Email successfully sent for notification {}", notification.getId());
+        log.info("Email message accepted by provider for notification {}", notification.getId());
 
         notification.setStatus(NotificationStatus.SENT);
         notification.setSentAt(LocalDateTime.now());
