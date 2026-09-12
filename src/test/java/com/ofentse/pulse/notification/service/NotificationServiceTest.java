@@ -9,6 +9,8 @@ import com.ofentse.pulse.notification.enums.OutboxEventStatus;
 import com.ofentse.pulse.notification.event.OutboxEventCreated;
 import com.ofentse.pulse.notification.repository.NotificationRepo;
 import com.ofentse.pulse.notification.repository.OutboxEventRepo;
+import com.ofentse.pulse.notification.template.NotificationTemplate;
+import com.ofentse.pulse.notification.template.NotificationTemplateService;
 import com.ofentse.pulse.notification.whatsapp.dto.WhatsAppNotificationDTO;
 import com.ofentse.pulse.notification.whatsapp.dto.WhatsAppNotificationMessage;
 import org.junit.jupiter.api.*;
@@ -19,6 +21,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import tools.jackson.databind.ObjectMapper;
+
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -40,6 +44,9 @@ class NotificationServiceTest {
     @Mock
     private ObjectMapper objectMapper;
 
+    @Mock
+    private NotificationTemplateService notificationTemplateService;
+
     @InjectMocks
     private NotificationService notificationService;
 
@@ -52,8 +59,8 @@ class NotificationServiceTest {
 
         emailDTO = new EmailNotificationDTO(
                 "user@gmail.com",
-                "Welcome",
-                "Hello from Pulse"
+                "TEST_TEMPLATE",
+                Map.of("name", "Test User")
         );
 
         whatsAppDTO = new WhatsAppNotificationDTO(
@@ -73,18 +80,35 @@ class NotificationServiceTest {
         @DisplayName("SendEmailNotification - Success")
         void sendEmailNotification_PublishEventAndSavesOutbox_WhenDTOIsValid() {
 
+            NotificationTemplate template = new NotificationTemplate();
+            template.setName("TEST_TEMPLATE");
+            template.setSubject("Test subject");
+            template.setBody("Hello {{name}}");
+
+            when(notificationTemplateService.getTemplate("TEST_TEMPLATE")).thenReturn(template);
+
+            when(notificationTemplateService.render(template.getSubject(), emailDTO.getVariables()))
+                    .thenReturn("Test subject");
+
+            when(notificationTemplateService.render(template.getBody(), emailDTO.getVariables()))
+                    .thenReturn("Hello Test User");
+
             when(objectMapper.writeValueAsString(any(EmailNotificationMessage.class))).thenReturn("Payload");
             when(notificationRepo.save(any(Notification.class))).thenReturn(notification);
             when(outboxEventRepo.save(any(OutboxEvent.class))).thenReturn(new OutboxEvent());
 
             notificationService.sendEmailNotification(emailDTO);
 
+            verify(notificationTemplateService).getTemplate("TEST_TEMPLATE");
+            verify(notificationTemplateService).render(template.getSubject(), emailDTO.getVariables());
+            verify(notificationTemplateService).render(template.getBody(), emailDTO.getVariables());
+
             ArgumentCaptor<Notification> captor1 = ArgumentCaptor.forClass(Notification.class);
             verify(notificationRepo).save(captor1.capture());
             Notification savedNotification = captor1.getValue();
 
             assertEquals("user@gmail.com", savedNotification.getRecipient());
-            assertEquals("Welcome", savedNotification.getSubject());
+            assertEquals("Test subject", savedNotification.getSubject());
             assertEquals(NotificationStatus.PENDING, savedNotification.getStatus());
             assertNotNull(savedNotification.getCreatedAt());
 

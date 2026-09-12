@@ -13,6 +13,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
 
+import java.util.Map;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -41,8 +43,8 @@ class NotificationControllerTest {
     void setup() {
         emailDTO = new EmailNotificationDTO(
                 "user@gmail.com",
-                "Welcome",
-                "Hello from Pulse"
+                "TEST_TEMPLATE",
+                Map.of("name", "Test User")
         );
 
         whatsAppDTO = new WhatsAppNotificationDTO(
@@ -70,9 +72,10 @@ class NotificationControllerTest {
         }
 
         @Test
-        @DisplayName("Returns 400 Bad Request when subject is blank")
-        void sendEmailNotification_Returns400BadRequest_whenSubjectIsBlank() throws Exception {
-            emailDTO.setSubject("  ");
+        @DisplayName("Returns 400 Bad Request when template name is blank")
+        void sendEmailNotification_Returns400BadRequest_whenTemplateNameIsBlank() throws Exception {
+
+            emailDTO.setTemplateName("  ");
 
             mockMvc.perform(post("/notifications/email")
                     .contentType(MediaType.APPLICATION_JSON)
@@ -115,7 +118,7 @@ class NotificationControllerTest {
         }
 
         @Test
-        @DisplayName("Returns 400 Bad Request when 'contents' is blank")
+        @DisplayName("Returns 400 Bad Request when 'content' is blank")
         void sendWhatsAppNotification_Returns400BadRequest_whenContentIsBlank() throws Exception{
             whatsAppDTO.setContent("  ");
 
