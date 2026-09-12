@@ -5,11 +5,13 @@ import com.ofentse.pulse.notification.entity.Notification;
 import com.ofentse.pulse.notification.enums.NotificationStatus;
 import com.ofentse.pulse.notification.exception.NotificationNotFoundException;
 import com.ofentse.pulse.notification.repository.NotificationRepo;
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -34,13 +36,6 @@ public class EmailService {
 
         log.info("Processing Email notification {}", message.getNotificationId());
 
-        SimpleMailMessage email = new SimpleMailMessage();
-
-        email.setFrom(mailUsername);
-        email.setTo(message.getTo());
-        email.setSubject(message.getSubject());
-        email.setText(message.getContent());
-
         Notification notification = notificationRepo.findById(message.getNotificationId())
                 .orElseThrow(() -> {
                         log.warn("Notification {} not found message will be retried", message.getNotificationId());
@@ -56,7 +51,22 @@ public class EmailService {
             return;
         }
 
-        mailSender.send(email);
+        try {
+            MimeMessage email = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(email, true);
+
+            helper.setFrom(mailUsername);
+            helper.setTo(message.getTo());
+            helper.setSubject(message.getSubject());
+            helper.setText(message.getContent(), true);
+
+            mailSender.send(email);
+
+        } catch (MessagingException e) {
+
+            log.error("Failed to construct email for notification {}", message.getNotificationId(), e);
+            throw new RuntimeException("Failed to construct email", e);
+        }
 
         log.info("Email message accepted by provider for notification {}", notification.getId());
 

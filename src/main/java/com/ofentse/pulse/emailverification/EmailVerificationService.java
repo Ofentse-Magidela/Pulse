@@ -12,6 +12,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Map;
 
 @Service
 public class  EmailVerificationService {
@@ -34,12 +36,22 @@ public class  EmailVerificationService {
         verification.setUser(user);
         repo.save(verification);
 
-        EmailNotificationRequest request = new EmailNotificationRequest(
-                user.getEmail(),
-                "Email verification Code",
-                "Your verification code " + verification.getCode() +
-                        " expires in 5 minutes"
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM yyyy, HH:mm");
+        String expiresAt = verification.getExpiresAt().format(formatter);
+
+        Map<String, String> variables = Map.of(
+                "name", user.getUsername(),
+                "verificationCode", verification.getCode(),
+                "expiresAt", expiresAt
         );
+
+        EmailNotificationRequest request =
+                new EmailNotificationRequest(
+                        user.getEmail(),
+                        "EMAIL_VERIFICATION",
+                        variables
+                );
+
         pulseClient.sendEmail(request);
     }
 
@@ -59,11 +71,13 @@ public class  EmailVerificationService {
         verification.getUser().setEmailVerified(true);
         verification.setStatus(VerificationStatus.USED);
 
-        EmailNotificationRequest request = new EmailNotificationRequest(
-                dto.getEmail(),
-                "Email Verified",
-                "Your email was verified successfully."
-        );
+        EmailNotificationRequest request =
+                new EmailNotificationRequest(
+                        dto.getEmail(),
+                        "EMAIL_VERIFICATION",
+                        Map.of("", "")
+                );
+
 
         pulseClient.sendEmail(request);
     }

@@ -10,6 +10,8 @@ import com.ofentse.pulse.notification.enums.OutboxEventStatus;
 import com.ofentse.pulse.notification.event.OutboxEventCreated;
 import com.ofentse.pulse.notification.repository.NotificationRepo;
 import com.ofentse.pulse.notification.repository.OutboxEventRepo;
+import com.ofentse.pulse.notification.template.NotificationTemplate;
+import com.ofentse.pulse.notification.template.NotificationTemplateService;
 import com.ofentse.pulse.notification.whatsapp.dto.WhatsAppNotificationDTO;
 import com.ofentse.pulse.notification.whatsapp.dto.WhatsAppNotificationMessage;
 import org.slf4j.Logger;
@@ -31,22 +33,30 @@ public class NotificationService {
     private final ObjectMapper objectMapper;
     private final OutboxEventRepo outboxRepo;
     private final ApplicationEventPublisher applicationEventPublisher;
+    private final NotificationTemplateService notificationTemplateService;
 
     public NotificationService(NotificationRepo repo, ObjectMapper objectMapper, OutboxEventRepo outboxRepo,
-                               ApplicationEventPublisher applicationEventPublisher) {
+                               ApplicationEventPublisher applicationEventPublisher, NotificationTemplateService notificationTemplateService) {
         this.repo = repo;
         this.objectMapper = objectMapper;
         this.outboxRepo = outboxRepo;
         this.applicationEventPublisher = applicationEventPublisher;
+        this.notificationTemplateService = notificationTemplateService;
     }
 
     @Transactional
     public void sendEmailNotification(EmailNotificationDTO dto) {
+
+        NotificationTemplate template = notificationTemplateService.getTemplate(dto.getTemplateName());
+
+        String subject = notificationTemplateService.render(template.getSubject(), dto.getVariables());
+        String content = notificationTemplateService.render(template.getBody(), dto.getVariables());
+
         Notification notification = new Notification();
 
         notification.setChannel(NotificationChannel.EMAIL);
         notification.setRecipient(dto.getTo());
-        notification.setSubject(dto.getSubject());
+        notification.setSubject(subject);
         notification.setCreatedAt(LocalDateTime.now());
         notification.setStatus(NotificationStatus.PENDING);
 
@@ -58,8 +68,8 @@ public class NotificationService {
                 new EmailNotificationMessage(
                         notification.getId(),
                         dto.getTo(),
-                        dto.getSubject(),
-                        dto.getContent()
+                        subject,
+                        content
         );
 
         saveOutboxEvent(message, notification);
