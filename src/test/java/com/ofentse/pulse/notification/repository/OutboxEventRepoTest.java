@@ -101,8 +101,8 @@ class OutboxEventRepoTest {
             );
 
             assertEquals(1, eventList.size());
-            assertEquals(OutboxEventStatus.PENDING, eventList.get(0).getStatus());
-            assertThat(eventList.get(0).getNextRetryAt()).isBeforeOrEqualTo(now);
+            assertEquals(OutboxEventStatus.PENDING, eventList.getFirst().getStatus());
+            assertThat(eventList.getFirst().getNextRetryAt()).isBeforeOrEqualTo(now);
         }
 
         @Test

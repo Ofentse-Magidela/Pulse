@@ -3,12 +3,13 @@ package com.ofentse.pulse.notification.controller;
 import com.ofentse.pulse.notification.email.dto.EmailNotificationDTO;
 import com.ofentse.pulse.notification.service.NotificationService;
 import com.ofentse.pulse.notification.whatsapp.dto.WhatsAppNotificationDTO;
-import com.ofentse.pulse.security.JwtService;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
@@ -20,8 +21,13 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(NotificationController.class)
+@WebMvcTest(
+        controllers = NotificationController.class,
+        properties = {
+                "spring.security.oauth2.resourceserver.jwt.issuer-uri=http://localhost:8180/realms/pulse"
+        })
 @AutoConfigureMockMvc(addFilters = false)
+@ActiveProfiles("test")
 class NotificationControllerTest {
 
     @Autowired
@@ -34,7 +40,7 @@ class NotificationControllerTest {
     private NotificationService notificationService;
 
     @MockitoBean
-    private JwtService jwtService;
+    private JwtDecoder jwtDecoder;
 
     private EmailNotificationDTO emailDTO;
     private WhatsAppNotificationDTO whatsAppDTO;
@@ -64,8 +70,8 @@ class NotificationControllerTest {
             doNothing().when(notificationService).sendEmailNotification(any(EmailNotificationDTO.class));
 
             mockMvc.perform(post("/notifications/email")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(emailDTO)))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(emailDTO)))
                     .andExpect(status().isAccepted());
 
             verify(notificationService).sendEmailNotification(any(EmailNotificationDTO.class));
@@ -78,8 +84,8 @@ class NotificationControllerTest {
             emailDTO.setTemplateName("  ");
 
             mockMvc.perform(post("/notifications/email")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(emailDTO)))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(emailDTO)))
                     .andExpect(status().isBadRequest());
 
             verifyNoInteractions(notificationService);
@@ -97,8 +103,8 @@ class NotificationControllerTest {
             doNothing().when(notificationService).sendWhatsAppNotification((any(WhatsAppNotificationDTO.class)));
 
             mockMvc.perform(post("/notifications/whatsapp")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(whatsAppDTO)))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(whatsAppDTO)))
                     .andExpect(status().isAccepted());
 
             verify(notificationService).sendWhatsAppNotification(any(WhatsAppNotificationDTO.class));
@@ -106,7 +112,7 @@ class NotificationControllerTest {
 
         @Test
         @DisplayName("Returns 400 Bad Request when 'to' is blank")
-        void sendWhatsAppNotification_Returns400BadRequest_whenToIsBlank() throws Exception{
+        void sendWhatsAppNotification_Returns400BadRequest_whenToIsBlank() throws Exception {
             whatsAppDTO.setTo("  ");
 
             mockMvc.perform(post("/notifications/whatsapp")
@@ -119,7 +125,7 @@ class NotificationControllerTest {
 
         @Test
         @DisplayName("Returns 400 Bad Request when 'content' is blank")
-        void sendWhatsAppNotification_Returns400BadRequest_whenContentIsBlank() throws Exception{
+        void sendWhatsAppNotification_Returns400BadRequest_whenContentIsBlank() throws Exception {
             whatsAppDTO.setContent("  ");
 
             mockMvc.perform(post("/notifications/whatsapp")
