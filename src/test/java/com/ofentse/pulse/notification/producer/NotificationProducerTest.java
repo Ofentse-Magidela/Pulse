@@ -99,7 +99,7 @@ class NotificationProducerTest {
 
             verify(rabbitTemplate, times(1)).convertAndSend(
                     RabbitMQConfig.EXCHANGE,
-                    RabbitMQConfig.EMAIL_ROUTING_KEY,
+                    RabbitMQConfig.WHATSAPP_ROUTING_KEY,
                     whatsAppMessage
             );
         }

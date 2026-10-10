@@ -8,8 +8,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
@@ -27,7 +25,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
                 "spring.security.oauth2.resourceserver.jwt.issuer-uri=http://localhost:8180/realms/pulse"
         })
 @AutoConfigureMockMvc(addFilters = false)
-@ActiveProfiles("test")
+//@ActiveProfiles("test")
 class NotificationControllerTest {
 
     @Autowired
@@ -38,9 +36,6 @@ class NotificationControllerTest {
 
     @MockitoBean
     private NotificationService notificationService;
-
-    @MockitoBean
-    private JwtDecoder jwtDecoder;
 
     private EmailNotificationDTO emailDTO;
     private WhatsAppNotificationDTO whatsAppDTO;

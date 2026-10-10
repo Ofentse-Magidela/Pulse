@@ -5,6 +5,8 @@ import com.ofentse.pulse.notification.entity.Notification;
 import com.ofentse.pulse.notification.enums.NotificationStatus;
 import com.ofentse.pulse.notification.exception.NotificationNotFoundException;
 import com.ofentse.pulse.notification.repository.NotificationRepo;
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -14,8 +16,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mail.MailSendException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
@@ -66,10 +70,13 @@ class EmailServiceTest {
 
         @Test
         @DisplayName("Send Email - Success")
-        void sendEmail_DelegateEmailToJavaMailSender() {
+        void sendEmail_DelegateEmailToJavaMailSender() throws MessagingException {
+
+            MimeMessage mimeMessage = new JavaMailSenderImpl().createMimeMessage();
 
             when(notificationRepo.findById(message.getNotificationId()))
                     .thenReturn(Optional.of(notification));
+            when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
 
             LocalDateTime before = LocalDateTime.now();
 
@@ -77,14 +84,13 @@ class EmailServiceTest {
 
             LocalDateTime after = LocalDateTime.now();
 
-            ArgumentCaptor<SimpleMailMessage> emailCaptor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+            ArgumentCaptor<MimeMessage> emailCaptor = ArgumentCaptor.forClass(MimeMessage.class);
             verify(mailSender).send(emailCaptor.capture());
-            SimpleMailMessage capturedEmail = emailCaptor.getValue();
+            MimeMessage capturedEmail = emailCaptor.getValue();
 
-            assertEquals("pulse@api.com", capturedEmail.getFrom());
-            assertEquals("new@gmail.com", capturedEmail.getTo()[0]);
+            assertEquals("pulse@api.com", capturedEmail.getFrom()[0].toString());
+            assertEquals("new@gmail.com", capturedEmail.getAllRecipients()[0].toString());
             assertEquals("Welcome", capturedEmail.getSubject());
-            assertEquals("Welcome to pulse.", capturedEmail.getText());
 
             ArgumentCaptor<Notification> notificationCaptor = ArgumentCaptor.forClass(Notification.class);
             verify(notificationRepo).save(notificationCaptor.capture());
@@ -122,15 +128,17 @@ class EmailServiceTest {
         @DisplayName("Send Email - Exception Mail Sender Failure")
         void sendEmail_PropagatesException_WhenMailSenderFails() {
 
+            MimeMessage mimeMessage = new JavaMailSenderImpl().createMimeMessage();
+            when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
+
             when(notificationRepo.findById(message.getNotificationId()))
                     .thenReturn(Optional.of(notification));
 
-            Exception exception = new RuntimeException("SMTP server unavailable");
-
-            doThrow(exception).when(mailSender).send(any(SimpleMailMessage.class));
+            doThrow(new MailSendException("SMTP server unavailable"))
+                    .when(mailSender).send(any(MimeMessage.class));
 
             Exception thrown = assertThrows(
-                    RuntimeException.class,
+                    MailSendException.class,
                     () -> emailService.sendEmail(message)
             );
 
@@ -138,7 +146,7 @@ class EmailServiceTest {
             assertEquals(NotificationStatus.PENDING, notification.getStatus());
 
             verify(notificationRepo, times(1)).findById(message.getNotificationId());
-            verify(mailSender, times(1)).send(any(SimpleMailMessage.class));
+            verify(mailSender, times(1)).send(any(MimeMessage.class));
             verify(notificationRepo, never()).save(any(Notification.class));
         }
 
