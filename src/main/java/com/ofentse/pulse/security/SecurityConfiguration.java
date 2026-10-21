@@ -20,6 +20,8 @@ public class SecurityConfiguration {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(custom -> custom
+                        .requestMatchers("/notifications/**")
+                        .hasAuthority("SCOPE_notifications:send")
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(
