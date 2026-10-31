@@ -37,23 +37,33 @@ public class NotificationTemplateService {
 
         String key = CACHE_KEY_PREFIX + name;
         String cachedJson = null;
+        boolean cacheAvailable = true;
 
         try {
             cachedJson = redisTemplate.opsForValue().get(key);
         } catch(DataAccessException e) {
+            cacheAvailable = false;
             log.warn("Redis cache lookup failed for template: {}", name, e);
         }
 
         if (cachedJson != null) {
             try {
+
                 log.debug("Template cache hit: {}", name);
                 return objectMapper.readValue(cachedJson, NotificationTemplate.class);
+
             } catch (JacksonException e) {
                 log.warn("Cached template with name {} contains invalid JSON", name, e);
+
+                try {
+                    redisTemplate.delete(key);
+                }catch (DataAccessException ex) {
+                    log.warn("Failed to remove invalid cached template: {}", name, ex);
+                }
             }
         }
 
-        log.debug("Template cache miss: {}", name);
+        if (cacheAvailable && cachedJson == null) log.debug("Template cache miss: {}", name);
 
         NotificationTemplate template = notificationTemplateRepo.findByName(name)
                 .orElseThrow(() -> new TemplateNotFoundException(
